@@ -265,7 +265,7 @@ def main(page: ft.Page):
             ft.Text("Temperaturas e UR", weight="bold"),
             ft.Row([txt_ti, txt_tf, txt_uri, txt_urf], wrap=True),
             ft.Container(height=20),
-            ft.ElevatedButton("BAIXAR RELATÓRIO PDF", on_click=btn_click, height=60, width=300, bgcolor=ft.colors.BLUE, color=ft.colors.WHITE),
+            ft.ElevatedButton("BAIXAR RELATÓRIO PDF", on_click=btn_click, height=60, width=300, bgcolor="blue", color="white"),
             lbl_erro
         ], scroll="auto")
     )
