@@ -18,8 +18,9 @@ jobs:
       - name: Install Dependencies
         run: pip install flet
 
+      # AQUI ESTÁ A CORREÇÃO: Adicionamos o --base-url
       - name: Build Flet App for Web
-        run: flet publish main.py --assets assets
+        run: flet publish main.py --assets assets --base-url /GeradorRelatorioTesto174H/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
