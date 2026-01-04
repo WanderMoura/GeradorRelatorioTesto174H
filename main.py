@@ -14,27 +14,23 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
 from PIL import Image as PILImage
 
-# Configuração para não abrir janelas de gráfico
+# Configuração essencial
 matplotlib.use('Agg')
 
 def main(page: ft.Page):
     page.title = "Gerador Testo Web"
     page.scroll = "adaptive"
     page.theme_mode = ft.ThemeMode.LIGHT
-    # Ajuste de responsividade para celular
     page.window_width = 400 
     
-    # --- Lógica de Geração (Adaptada para Memória) ---
+    # --- Lógica de Geração do PDF ---
     def gerar_pdf_bytes(params):
-        # Buffer para guardar o PDF na memória RAM
         buffer_pdf = io.BytesIO()
         
-        # Configs e Logo
+        # Ajuste de logo
         FOOTER_TEXT = "TESTO 174H Termistor NTC - Série 85327157"
-        # Na web, a logo é lida dos assets
         logo_path = "assets/testo-be-sure-logo-claim.webp"
 
-        # Funções auxiliares
         def _fmt_decimal(v, casas=1):
             try: return f"{float(str(v).replace(',','.')):.{casas}f}".replace('.',',')
             except: return str(v)
@@ -51,7 +47,7 @@ def main(page: ft.Page):
         produto_str = str(params['produto'])
         timestamp_fixo = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Cálculos Matemáticos
+        # Cálculos
         data_dt = datetime.datetime.strptime(data_str, "%d/%m/%Y")
         inicio_dt = datetime.datetime.combine(data_dt.date(), datetime.datetime.strptime(inicio_str, "%H:%M").time())
         fim_dt = datetime.datetime.combine(data_dt.date(), datetime.datetime.strptime(fim_str, "%H:%M").time())
@@ -71,7 +67,7 @@ def main(page: ft.Page):
             k_list.append(0.0 if a<=0 or b<=0 else -np.log(b/a))
         k_global = -np.log((Tf_f-Tamb)/(Ti_f-Tamb))/minutos
 
-        # Gráfico (Gerado em memória)
+        # Gráfico
         fig, ax1 = plt.subplots(figsize=(9.2,5.4))
         n_fino=10
         t_fino=np.linspace(0,minutos,minutos*n_fino+1)
@@ -108,13 +104,11 @@ def main(page: ft.Page):
         PAGE_W,PAGE_H=A4; left_margin=right_margin=72; base_top_margin=72.0; gap_below_logo=8.0
         logo_w=70.0; logo_h=16.0
         
-        # Processamento da Logo (Memória)
         try:
             with PILImage.open(logo_path) as im:
                 w,h=im.size; ratio=h/float(w) if w else 0.25
                 logo_h=max(16.0, logo_w*ratio)
-        except:
-            pass # Usa padrão se falhar
+        except: pass 
             
         top_margin = base_top_margin + logo_h + gap_below_logo
         bottom_margin = 50
@@ -147,7 +141,6 @@ def main(page: ft.Page):
                 super().save()
 
         def on_page(c, doc):
-            # Desenhar logo direto do arquivo asset
             try:
                 y = PAGE_H - base_top_margin - logo_h
                 c.drawImage(logo_path, left_margin, y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
@@ -162,7 +155,7 @@ def main(page: ft.Page):
         frame=Frame(left_margin, bottom_margin, PAGE_W-left_margin-right_margin, PAGE_H-top_margin-bottom_margin, id="f1")
         doc.addPageTemplates([PageTemplate(id="pt", frames=[frame], onPage=on_page)])
 
-        # Story
+        # Montagem do Conteúdo
         cab_colwidths=[210,210]
         linha_titulo=[Paragraph(nome_relatorio, style_title),""]
         linha_obj=[Paragraph(objetivo_texto, style_l),""]
@@ -188,7 +181,7 @@ def main(page: ft.Page):
 
         header=[Paragraph("ID",style_c:=style_c), Paragraph("Data/Hora",style_c), Paragraph("Temperatura [°C]",style_c), Paragraph("UR [%Hr]",style_c), Paragraph("k (min<super>-1</super>)",style_c)]
         rows=[header]
-        sec=30 # Fixo em 30s para reprodutibilidade
+        sec=30 
         for i,t in enumerate(tempos, start=1):
             rows.append([Paragraph(str(i),style_c),
                          Paragraph(t.replace(second=sec).strftime("%d/%m/%Y %H:%M:%S"),style_c),
@@ -207,7 +200,7 @@ def main(page: ft.Page):
         buffer_pdf.seek(0)
         return buffer_pdf.getvalue()
 
-    # --- UI ---
+    # --- Interface Gráfica ---
     txt_nome = ft.TextField(label="Nome do Relatório", value="MONITORAMENTO PCC 2B NA CÂMARA 0 ºC DO SETOR PRODUTIVO DO IQF", text_size=12)
     txt_objetivo = ft.TextField(label="Objetivo", value="Verificação da capacidade do atendimento do binômio 4 ºC em 4 Horas", text_size=12)
     txt_data = ft.TextField(label="Data (dd/mm/aaaa)", value=datetime.datetime.now().strftime("%d/%m/%Y"), width=160)
@@ -222,7 +215,8 @@ def main(page: ft.Page):
     
     lbl_erro = ft.Text(value="", color="red")
 
-    def btn_click(e):
+    # AQUI ESTÁ A CORREÇÃO: Função async para funcionar o download
+    async def btn_click(e):
         try:
             lbl_erro.value = "Gerando PDF..."
             page.update()
@@ -234,21 +228,20 @@ def main(page: ft.Page):
                 "UR_ini": txt_uri.value, "UR_fim": txt_urf.value
             }
             
-            # Gera os bytes do PDF
-            pdf_bytes = gerar_pdf_interno(params) if 'gerar_pdf_interno' in globals() else gerar_pdf_bytes(params)
+            # Gera os bytes
+            pdf_bytes = gerar_pdf_bytes(params)
             
-            # Converte para Base64 para download no navegador
+            # Prepara download
             b64 = base64.b64encode(pdf_bytes).decode()
-            nome_arq = f"Relatorio_Testo_{datetime.datetime.now().strftime('%H%M%S')}.pdf"
             
-            # Dispara download
-            page.launch_url(f"data:application/pdf;base64,{b64}")
+            # CORREÇÃO: Await para garantir que o navegador receba o comando
+            await page.launch_url(f"data:application/pdf;base64,{b64}")
             
             lbl_erro.value = ""
             page.update()
             
-            # Feedback visual
-            page.show_snack_bar(ft.SnackBar(content=ft.Text(f"Download iniciado: {nome_arq}")))
+            # CORREÇÃO: Comando novo para abrir a SnackBar
+            page.open(ft.SnackBar(content=ft.Text(f"Download iniciado!")))
 
         except Exception as ex:
             lbl_erro.value = f"Erro: {ex}"
