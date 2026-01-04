@@ -26,8 +26,6 @@ def main(page: ft.Page):
     # --- Lógica de Geração do PDF ---
     def gerar_pdf_bytes(params):
         buffer_pdf = io.BytesIO()
-        
-        # Ajuste de logo
         FOOTER_TEXT = "TESTO 174H Termistor NTC - Série 85327157"
         logo_path = "assets/testo-be-sure-logo-claim.webp"
 
@@ -70,8 +68,8 @@ def main(page: ft.Page):
         # Gráfico
         fig, ax1 = plt.subplots(figsize=(9.2,5.4))
         n_fino=10
-        t_fino=np.linspace(0,minutos,minutos*n_fino+1)
         tempos_fino=[inicio_dt+datetime.timedelta(minutes=float(i)/n_fino) for i in range(minutos*n_fino+1)]
+        t_fino=np.linspace(0,minutos,minutos*n_fino+1)
         T_exp = Tamb + (Ti_f-Tamb)*np.exp(-k_global*t_fino)
         ax1.plot(tempos_fino, T_exp, linestyle='-', label=f"K constante de resfriamento (k={k_global:.3f} min⁻¹)")
         ax1.plot(tempos, T_disp, marker='o', linestyle='none', label="ºC evolução do resfriamento")
@@ -145,7 +143,6 @@ def main(page: ft.Page):
                 y = PAGE_H - base_top_margin - logo_h
                 c.drawImage(logo_path, left_margin, y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
             except: pass
-            
             y_logo_top = PAGE_H - base_top_margin; y_logo_bottom = PAGE_H - top_margin; y_center=(y_logo_top+y_logo_bottom)/2.0
             x_right = PAGE_W - right_margin
             c.setFont("Helvetica",9); c.drawRightString(x_right, y_center + 6, timestamp_fixo)
@@ -155,7 +152,6 @@ def main(page: ft.Page):
         frame=Frame(left_margin, bottom_margin, PAGE_W-left_margin-right_margin, PAGE_H-top_margin-bottom_margin, id="f1")
         doc.addPageTemplates([PageTemplate(id="pt", frames=[frame], onPage=on_page)])
 
-        # Montagem do Conteúdo
         cab_colwidths=[210,210]
         linha_titulo=[Paragraph(nome_relatorio, style_title),""]
         linha_obj=[Paragraph(objetivo_texto, style_l),""]
@@ -167,14 +163,7 @@ def main(page: ft.Page):
         k_block=f"<b>K constante (global)</b><br/>{_fmt_decimal(k_global,4)} min<super>-1</super>"
         cab=[linha_titulo, linha_obj, linha_info, [Paragraph(temp_block, style_l), Paragraph(ur_block, style_l)],[Paragraph(taxa_block, style_l), Paragraph(k_block, style_l)]]
         cab_table=Table(cab, colWidths=cab_colwidths, hAlign="CENTER")
-        cab_table.setStyle(TableStyle([("GRID",(0,0),(-1,-1),0.6,colors.black),
-                                       ("BACKGROUND",(0,0),(-1,0),colors.lightgrey),
-                                       ("BACKGROUND",(0,1),(-1,1),colors.whitesmoke),
-                                       ("VALIGN",(0,0),(-1,-1),"TOP"),
-                                       ("SPAN",(0,0),(1,0)),("SPAN",(0,1),(1,1)),
-                                       ("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6),
-                                       ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
-                                       ("FONTSIZE",(0,0),(-1,-1),9)]))
+        cab_table.setStyle(TableStyle([("GRID",(0,0),(-1,-1),0.6,colors.black),("BACKGROUND",(0,0),(-1,0),colors.lightgrey),("BACKGROUND",(0,1),(-1,1),colors.whitesmoke),("VALIGN",(0,0),(-1,-1),"TOP"),("SPAN",(0,0),(1,0)),("SPAN",(0,1),(1,1)),("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),("FONTSIZE",(0,0),(-1,-1),9)]))
         story=[cab_table, Spacer(1,10)]
         story.append(RLImage(buffer_chart, width=420, height=260))
         story.append(Spacer(1,8))
@@ -183,43 +172,38 @@ def main(page: ft.Page):
         rows=[header]
         sec=30 
         for i,t in enumerate(tempos, start=1):
-            rows.append([Paragraph(str(i),style_c),
-                         Paragraph(t.replace(second=sec).strftime("%d/%m/%Y %H:%M:%S"),style_c),
-                         Paragraph(_fmt_decimal(T_disp[i-1],1),style_c),
-                         Paragraph(_fmt_decimal(UR[i-1],1),style_c),
-                         Paragraph(_fmt_decimal(k_list[i-1],4),style_c)])
+            rows.append([Paragraph(str(i),style_c),Paragraph(t.replace(second=sec).strftime("%d/%m/%Y %H:%M:%S"),style_c),Paragraph(_fmt_decimal(T_disp[i-1],1),style_c),Paragraph(_fmt_decimal(UR[i-1],1),style_c),Paragraph(_fmt_decimal(k_list[i-1],4),style_c)])
         data_table=Table(rows, repeatRows=1, colWidths=[36,138,90,112,54], hAlign="CENTER")
-        data_table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.lightgrey),("TEXTCOLOR",(0,0),(-1,0),colors.black),
-                                        ("ALIGN",(0,1),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),0.25,colors.black),
-                                        ("FONTSIZE",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,0),8),("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
+        data_table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.lightgrey),("TEXTCOLOR",(0,0),(-1,0),colors.black),("ALIGN",(0,1),(-1,-1),"CENTER"),("GRID",(0,0),(-1,-1),0.25,colors.black),("FONTSIZE",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,0),8),("VALIGN",(0,0),(-1,-1),"MIDDLE")]))
         story.append(data_table)
         obs=f"Registro iniciado manual às {inicio_dt.replace(second=sec).strftime('%H:%M:%S')}; fim ao atingir {_fmt_decimal(Tf_f,1)} ºC às {fim_dt.replace(second=sec).strftime('%H:%M:%S')}."
         story.append(Spacer(1,8)); story.append(Paragraph(obs, style_obs))
-
         doc.build(story)
         buffer_pdf.seek(0)
         return buffer_pdf.getvalue()
 
-    # --- Interface Gráfica ---
+    # --- Elementos da UI ---
     txt_nome = ft.TextField(label="Nome do Relatório", value="MONITORAMENTO PCC 2B NA CÂMARA 0 ºC DO SETOR PRODUTIVO DO IQF", text_size=12)
     txt_objetivo = ft.TextField(label="Objetivo", value="Verificação da capacidade do atendimento do binômio 4 ºC em 4 Horas", text_size=12)
-    txt_data = ft.TextField(label="Data (dd/mm/aaaa)", value=datetime.datetime.now().strftime("%d/%m/%Y"), width=160)
+    txt_data = ft.TextField(label="Data", value=datetime.datetime.now().strftime("%d/%m/%Y"), width=160)
     txt_inicio = ft.TextField(label="Início", value="16:03", width=100)
     txt_fim = ft.TextField(label="Fim", value="16:53", width=100)
     txt_produto = ft.TextField(label="Produto", value="Sassami")
-    
     txt_ti = ft.TextField(label="T. Ini", value="5.5", width=80)
     txt_tf = ft.TextField(label="T. Fim", value="3.2", width=80)
     txt_uri = ft.TextField(label="UR Ini", value="73,8", width=80)
     txt_urf = ft.TextField(label="UR Fim", value="89,5", width=80)
     
-    lbl_erro = ft.Text(value="", color="red")
+    # Área onde o botão de download vai aparecer
+    area_download = ft.Container()
+    lbl_status = ft.Text("")
 
-    # AQUI ESTÁ A CORREÇÃO: Função async para funcionar o download
     async def btn_click(e):
         try:
-            lbl_erro.value = "Gerando PDF..."
-            lbl_erro.color = "black"
+            lbl_status.value = "Gerando... Aguarde."
+            lbl_status.color = "black"
+            # Limpa o botão anterior se houver
+            area_download.content = None
             page.update()
             
             params = {
@@ -229,23 +213,29 @@ def main(page: ft.Page):
                 "UR_ini": txt_uri.value, "UR_fim": txt_urf.value
             }
             
-            # Gera os bytes
             pdf_bytes = gerar_pdf_bytes(params)
-            
-            # Prepara download
             b64 = base64.b64encode(pdf_bytes).decode()
+            nome_arq = f"Relatorio_Testo_{datetime.datetime.now().strftime('%H%M%S')}.pdf"
             
-            # Avisa antes de lançar o download
-            lbl_erro.value = "Download iniciado! Verifique seus arquivos."
-            lbl_erro.color = "green"
+            # SOLUÇÃO FINAL: Cria um Link HTML Clicável
+            # Isso engana o navegador e obriga o download
+            html_content = f"""
+                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid green;">
+                    <p style="color: green; font-weight: bold; margin-bottom: 10px;">✅ Relatório Gerado com Sucesso!</p>
+                    <a href="data:application/pdf;base64,{b64}" download="{nome_arq}" 
+                       style="background-color: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; font-family: sans-serif;">
+                       CLIQUE AQUI PARA SALVAR O PDF
+                    </a>
+                </div>
+            """
+            
+            area_download.content = ft.Html(html_content)
+            lbl_status.value = ""
             page.update()
-            
-            # Dispara o download
-            await page.launch_url(f"data:application/pdf;base64,{b64}")
 
         except Exception as ex:
-            lbl_erro.value = f"Erro: {ex}"
-            lbl_erro.color = "red"
+            lbl_status.value = f"Erro: {ex}"
+            lbl_status.color = "red"
             page.update()
 
     page.add(
@@ -259,8 +249,10 @@ def main(page: ft.Page):
             ft.Text("Temperaturas e UR", weight="bold"),
             ft.Row([txt_ti, txt_tf, txt_uri, txt_urf], wrap=True),
             ft.Container(height=20),
-            ft.ElevatedButton("BAIXAR RELATÓRIO PDF", on_click=btn_click, height=60, width=300, bgcolor="blue", color="white"),
-            lbl_erro
+            ft.ElevatedButton("GERAR RELATÓRIO", on_click=btn_click, height=60, width=300, bgcolor="blue", color="white"),
+            lbl_status,
+            area_download, # O botão verde vai aparecer aqui
+            ft.Container(height=50) # Espaço extra no final
         ], scroll="auto")
     )
 
