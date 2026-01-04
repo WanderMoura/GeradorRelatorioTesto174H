@@ -17,6 +17,9 @@ from PIL import Image as PILImage
 # Configuração essencial
 matplotlib.use('Agg')
 
+# Variável global para guardar o PDF temporariamente
+pdf_b64_global = ""
+
 def main(page: ft.Page):
     page.title = "Gerador Testo Web"
     page.scroll = "adaptive"
@@ -194,16 +197,17 @@ def main(page: ft.Page):
     txt_uri = ft.TextField(label="UR Ini", value="73,8", width=80)
     txt_urf = ft.TextField(label="UR Fim", value="89,5", width=80)
     
-    # Área onde o botão de download vai aparecer
-    area_download = ft.Container()
     lbl_status = ft.Text("")
+    
+    # Botão de download (Começa invisível)
+    btn_download = ft.ElevatedButton("💾 SALVAR ARQUIVO", visible=False, bgcolor="green", color="white", height=60, width=300)
 
-    async def btn_click(e):
+    # Ação de gerar (Calcula o PDF e mostra o segundo botão)
+    def btn_gerar_click(e):
         try:
             lbl_status.value = "Gerando... Aguarde."
             lbl_status.color = "black"
-            # Limpa o botão anterior se houver
-            area_download.content = None
+            btn_download.visible = False
             page.update()
             
             params = {
@@ -214,29 +218,31 @@ def main(page: ft.Page):
             }
             
             pdf_bytes = gerar_pdf_bytes(params)
-            b64 = base64.b64encode(pdf_bytes).decode()
-            nome_arq = f"Relatorio_Testo_{datetime.datetime.now().strftime('%H%M%S')}.pdf"
             
-            # SOLUÇÃO FINAL: Cria um Link HTML Clicável
-            # Isso engana o navegador e obriga o download
-            html_content = f"""
-                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid green;">
-                    <p style="color: green; font-weight: bold; margin-bottom: 10px;">✅ Relatório Gerado com Sucesso!</p>
-                    <a href="data:application/pdf;base64,{b64}" download="{nome_arq}" 
-                       style="background-color: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; font-family: sans-serif;">
-                       CLIQUE AQUI PARA SALVAR O PDF
-                    </a>
-                </div>
-            """
+            # Guarda o PDF na variável global para o botão de download usar
+            global pdf_b64_global
+            pdf_b64_global = base64.b64encode(pdf_bytes).decode()
             
-            area_download.content = ft.Html(html_content)
-            lbl_status.value = ""
+            lbl_status.value = "Relatório pronto! Clique abaixo para salvar."
+            lbl_status.color = "green"
+            
+            # Revela o botão de download
+            btn_download.visible = True
             page.update()
 
         except Exception as ex:
             lbl_status.value = f"Erro: {ex}"
             lbl_status.color = "red"
             page.update()
+
+    # Ação de baixar (Chama o link)
+    async def btn_baixar_click(e):
+        global pdf_b64_global
+        nome_arq = f"Relatorio_Testo_{datetime.datetime.now().strftime('%H%M%S')}.pdf"
+        await page.launch_url(f"data:application/pdf;base64,{pdf_b64_global}")
+
+    # Conecta a função ao botão de download
+    btn_download.on_click = btn_baixar_click
 
     page.add(
         ft.Column([
@@ -249,10 +255,16 @@ def main(page: ft.Page):
             ft.Text("Temperaturas e UR", weight="bold"),
             ft.Row([txt_ti, txt_tf, txt_uri, txt_urf], wrap=True),
             ft.Container(height=20),
-            ft.ElevatedButton("GERAR RELATÓRIO", on_click=btn_click, height=60, width=300, bgcolor="blue", color="white"),
+            
+            # Botão 1: Gerar
+            ft.ElevatedButton("GERAR RELATÓRIO", on_click=btn_gerar_click, height=60, width=300, bgcolor="blue", color="white"),
+            
             lbl_status,
-            area_download, # O botão verde vai aparecer aqui
-            ft.Container(height=50) # Espaço extra no final
+            
+            # Botão 2: Baixar (Aparece depois)
+            btn_download,
+            
+            ft.Container(height=50)
         ], scroll="auto")
     )
 
