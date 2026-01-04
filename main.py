@@ -14,10 +14,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
 from PIL import Image as PILImage
 
-# Configuração essencial
+# Configuração essencial para evitar erros de GUI
 matplotlib.use('Agg')
 
-# Variável global para guardar o PDF temporariamente
+# Variável global para guardar o PDF gerado
 pdf_b64_global = ""
 
 def main(page: ft.Page):
@@ -26,7 +26,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window_width = 400 
     
-    # --- Lógica de Geração do PDF ---
+    # --- Lógica de Geração do PDF (Motor do App) ---
     def gerar_pdf_bytes(params):
         buffer_pdf = io.BytesIO()
         FOOTER_TEXT = "TESTO 174H Termistor NTC - Série 85327157"
@@ -48,7 +48,7 @@ def main(page: ft.Page):
         produto_str = str(params['produto'])
         timestamp_fixo = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Cálculos
+        # Cálculos Matemáticos
         data_dt = datetime.datetime.strptime(data_str, "%d/%m/%Y")
         inicio_dt = datetime.datetime.combine(data_dt.date(), datetime.datetime.strptime(inicio_str, "%H:%M").time())
         fim_dt = datetime.datetime.combine(data_dt.date(), datetime.datetime.strptime(fim_str, "%H:%M").time())
@@ -101,7 +101,7 @@ def main(page: ft.Page):
         plt.close()
         buffer_chart.seek(0)
 
-        # PDF Layout
+        # Layout PDF
         PAGE_W,PAGE_H=A4; left_margin=right_margin=72; base_top_margin=72.0; gap_below_logo=8.0
         logo_w=70.0; logo_h=16.0
         
@@ -202,7 +202,7 @@ def main(page: ft.Page):
     # Botão de download (Começa invisível)
     btn_download = ft.ElevatedButton("💾 SALVAR ARQUIVO", visible=False, bgcolor="green", color="white", height=60, width=300)
 
-    # Ação de gerar (Calcula o PDF e mostra o segundo botão)
+    # 1. Botão GERAR: Cria o PDF na memória
     def btn_gerar_click(e):
         try:
             lbl_status.value = "Gerando... Aguarde."
@@ -219,7 +219,7 @@ def main(page: ft.Page):
             
             pdf_bytes = gerar_pdf_bytes(params)
             
-            # Guarda o PDF na variável global para o botão de download usar
+            # Guarda o PDF na variável global em Base64
             global pdf_b64_global
             pdf_b64_global = base64.b64encode(pdf_bytes).decode()
             
@@ -235,11 +235,21 @@ def main(page: ft.Page):
             lbl_status.color = "red"
             page.update()
 
-    # Ação de baixar (Chama o link)
-    async def btn_baixar_click(e):
+    # 2. Botão BAIXAR: Usa JavaScript para forçar o Download (Infalível)
+    def btn_baixar_click(e):
         global pdf_b64_global
         nome_arq = f"Relatorio_Testo_{datetime.datetime.now().strftime('%H%M%S')}.pdf"
-        await page.launch_url(f"data:application/pdf;base64,{pdf_b64_global}")
+        
+        # Truque de Mágica: Cria um link HTML invisível e clica nele via JS
+        js_code = f"""
+        var link = document.createElement('a');
+        link.href = "data:application/pdf;base64,{pdf_b64_global}";
+        link.download = "{nome_arq}";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        """
+        page.run_js(js_code)
 
     # Conecta a função ao botão de download
     btn_download.on_click = btn_baixar_click
