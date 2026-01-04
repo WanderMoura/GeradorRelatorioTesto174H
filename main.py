@@ -219,6 +219,7 @@ def main(page: ft.Page):
     async def btn_click(e):
         try:
             lbl_erro.value = "Gerando PDF..."
+            lbl_erro.color = "black"
             page.update()
             
             params = {
@@ -234,17 +235,17 @@ def main(page: ft.Page):
             # Prepara download
             b64 = base64.b64encode(pdf_bytes).decode()
             
-            # CORREÇÃO: Await para garantir que o navegador receba o comando
-            await page.launch_url(f"data:application/pdf;base64,{b64}")
-            
-            lbl_erro.value = ""
+            # Avisa antes de lançar o download
+            lbl_erro.value = "Download iniciado! Verifique seus arquivos."
+            lbl_erro.color = "green"
             page.update()
             
-            # CORREÇÃO: Comando novo para abrir a SnackBar
-            page.open(ft.SnackBar(content=ft.Text(f"Download iniciado!")))
+            # Dispara o download
+            await page.launch_url(f"data:application/pdf;base64,{b64}")
 
         except Exception as ex:
             lbl_erro.value = f"Erro: {ex}"
+            lbl_erro.color = "red"
             page.update()
 
     page.add(
