@@ -1,4 +1,4 @@
-flet==0.22.1
+flet
 reportlab
 matplotlib
 numpy
